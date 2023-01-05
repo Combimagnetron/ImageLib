@@ -2,22 +2,19 @@ package com.combimagnetron.imageloader;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
-import java.awt.geom.AffineTransform;
-import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URL;
-import java.nio.file.Path;
 
 public class Avatar {
     private final BufferedImage image;
-    private final int scale;
     private final boolean isSlim;
-    private BufferedImage skinFront;
-    private BufferedImage skinSideLeft;
-    private BufferedImage skinSideRight;
+    private final BufferedImage skinFront;
+    private final BufferedImage skinSideLeft;
+    private final BufferedImage skinSideRight;
+    private Image.ColorType colorType = Image.ColorType.LEGACY;
 
-    public Avatar(String playerName, int scale, boolean slim) {
+    protected Avatar(String playerName, int scale, boolean slim, Image.ColorType colorType) {
         try {
             image = new BufferedImage(64, 64, 2);
             Graphics graphics = image.getGraphics();
@@ -27,42 +24,77 @@ public class Avatar {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        this.scale = scale;
         this.isSlim = slim;
-        generateBody();
+        this.skinFront = generateBody();
+        this.skinSideLeft = generateLeft(0);
+        this.skinSideRight = generateRight(0);
+        this.colorType = colorType;
     }
 
-    public Avatar(String playerName, int scale) {
-        try {
-            image = new BufferedImage(64, 64, 2);
-            Graphics graphics = image.getGraphics();
-            BufferedImage temp = ImageIO.read(new URL("https://mineskin.eu/skin/" + playerName));
-            graphics.drawImage(temp, 0, 0, null);
-            graphics.dispose();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        this.scale = scale;
-        this.isSlim = new Color(image.getRGB(55, 31), true).getAlpha() < 255;
-        generateBody();
-    }
-
-    public Avatar(BufferedImage image, int scale, boolean slim) {
+    protected Avatar(BufferedImage image, int scale, boolean slim) {
         this.image = image;
-        this.scale = scale;
         this.isSlim = slim;
-        generateBody();
+        this.skinFront = generateBody();
         this.skinSideLeft = generateLeft(0);
         this.skinSideRight = generateRight(0);
     }
-
 
     public static Builder builder() {
         return new Builder();
     }
 
+    public String getSmallSkin(int ascent, int scale) {
+        return ImageUtils.generateStringFromImage(getSmallSkinBufferedImage(scale), colorType, ascent);
+    }
 
-    private void generateBody() {
+    public String getFullBody(int scale, int ascent) {
+        return ImageUtils.generateStringFromImage(scale(skinFront, scale), colorType, ascent);
+    }
+
+    public String getHead(int scale, int ascent) {
+        return ImageUtils.generateStringFromImage(scale(skinFront.getSubimage(4, 0, 8, 8), scale), colorType, ascent);
+    }
+
+    public BufferedImage getSkinSideRight(int scale) {
+        return scale(skinSideRight, scale);
+    }
+
+    public BufferedImage getSkinSideLeft(int scale) {
+        return scale(skinSideLeft, scale);
+    }
+
+    public BufferedImage getSkinFront(int scale) {
+        return scale(skinFront, scale);
+    }
+
+    private void setOverlay(BufferedImage image, int alpha) {
+        Graphics graphics = image.getGraphics();
+        graphics.setColor(new Color(0, 0, 0, alpha));
+        graphics.fillRect(0, 0, image.getWidth(), image.getHeight());
+        graphics.dispose();
+    }
+
+    private BufferedImage scale(BufferedImage image, int scale) {
+        int width = image.getWidth() * scale;
+        int height = image.getHeight() * scale;
+        final BufferedImage finalImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        java.awt.Image scaledImage = image.getScaledInstance(width, height, java.awt.Image.SCALE_SMOOTH);
+        finalImage.getGraphics().drawImage(scaledImage, 0, 0, null);
+        finalImage.getGraphics().dispose();
+        return finalImage;
+    }
+
+    private BufferedImage getPart(int x, int y, int width, int height) {
+        return image.getSubimage(x, y, width, height);
+    }
+
+    private void drawOverlay(BufferedImage image, BufferedImage overlayImage) {
+        Graphics graphics = image.getGraphics();
+        graphics.drawImage(overlayImage, 0, 0, null);
+        graphics.dispose();
+    }
+
+    private BufferedImage generateBody() {
         final BufferedImage avatarImage = new BufferedImage(16, 32,BufferedImage.TYPE_INT_ARGB);
         Graphics graphics = avatarImage.getGraphics();
         final int offset = isSlim ? 1 : 0;
@@ -85,10 +117,10 @@ public class Avatar {
         graphics.drawImage(leftLeg, 8, 20, null);
         graphics.drawImage(rightLeg, 4, 20, null);
         graphics.dispose();
-        this.skinFront = avatarImage;
+        return avatarImage;
     }
 
-    public BufferedImage generateLeft(int overlay) {
+    private BufferedImage generateLeft(int overlay) {
         final BufferedImage avatarImage = new BufferedImage(8, 32,BufferedImage.TYPE_INT_ARGB);
         Graphics graphics = avatarImage.getGraphics();
         final int offset = isSlim ? 1 : 0;
@@ -109,7 +141,7 @@ public class Avatar {
         return avatarImage;
     }
 
-    public BufferedImage generateRight(int overlay) {
+    private BufferedImage generateRight(int overlay) {
         final BufferedImage avatarImage = new BufferedImage(8, 32,BufferedImage.TYPE_INT_ARGB);
         Graphics graphics = avatarImage.getGraphics();
         final int offset = isSlim ? 1 : 0;
@@ -130,7 +162,7 @@ public class Avatar {
         return avatarImage;
     }
 
-    public BufferedImage getSmallSkin(int scale) {
+    private BufferedImage getSmallSkinBufferedImage(int scale) {
         final BufferedImage avatarImage = new BufferedImage(19, 18,BufferedImage.TYPE_INT_ARGB);
         Graphics graphics = avatarImage.getGraphics();
         graphics.setColor(Color.BLACK);
@@ -158,52 +190,13 @@ public class Avatar {
         return scale(avatarImage, scale);
     }
 
-    private void setOverlay(BufferedImage image, int alpha) {
-        Graphics graphics = image.getGraphics();
-        graphics.setColor(new Color(0, 0, 0, alpha));
-        graphics.fillRect(0, 0, image.getWidth(), image.getHeight());
-        graphics.dispose();
-
-    }
-
-    public BufferedImage getBodyBufferedImage(int scale) {
-        return scale(skinFront, scale);
-    }
-
-    public String getFullBody(int scale, int ascent) {
-        return ImageUtils.generateStringFromImage(scale(skinFront, scale), Image.ColorType.LEGACY, ascent);
-    }
-
-    private BufferedImage scale(BufferedImage image, int scale) {
-        int width = image.getWidth() * scale;
-        int height = image.getHeight() * scale;
-        final BufferedImage finalImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-        java.awt.Image scaledImage = image.getScaledInstance(width, height, java.awt.Image.SCALE_SMOOTH);
-        finalImage.getGraphics().drawImage(scaledImage, 0, 0, null);
-        finalImage.getGraphics().dispose();
-        return finalImage;
-    }
-
-    private BufferedImage getPart(int x, int y, int width, int height) {
-        return image.getSubimage(x, y, width, height);
-    }
-
-    private void drawOverlay(BufferedImage image, BufferedImage overlayImage) {
-        Graphics graphics = image.getGraphics();
-        graphics.drawImage(overlayImage, 0, 0, null);
-        graphics.dispose();
-    }
-
-    public String getHead(int scale, int ascent) {
-        return ImageUtils.generateStringFromImage(scale(skinFront.getSubimage(4, 0, 8, 8), scale), Image.ColorType.LEGACY, ascent);
-    }
 
     public static class Builder {
         private String playerName = null;
         private BufferedImage image = null;
-        private Image.ColorType colorType;
-        private int scale = 1;
+        private Image.ColorType colorType = Image.ColorType.LEGACY;
         private int ascent = 0;
+        private int scale = 1;
         private boolean isSlim = false;
 
         public Builder playerName(String playerName) {
@@ -221,11 +214,6 @@ public class Avatar {
             return this;
         }
 
-        public Builder scale(int scale) {
-            this.scale = scale;
-            return this;
-        }
-
         public Builder ascent(int ascent) {
             this.ascent = ascent;
             return this;
@@ -236,12 +224,18 @@ public class Avatar {
             return this;
         }
 
+        public Builder scale(int scale) {
+            this.scale = scale;
+            return this;
+        }
+
+
         public Avatar build() {
             if (colorType == null) colorType = Image.ColorType.LEGACY;
             if (image != null)
                 return new Avatar(image, scale, isSlim);
             else if (playerName != null)
-                return new Avatar(playerName, scale, isSlim);
+                return new Avatar(playerName, scale, isSlim, colorType);
             return null;
         }
     }
