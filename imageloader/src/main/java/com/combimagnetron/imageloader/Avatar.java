@@ -185,7 +185,7 @@ public class Avatar {
         graphics.drawImage(skinFront.getSubimage(4, 28, 4, 4), 7, 13, null);
         graphics.drawImage(skinFront.getSubimage(8, 28, 4, 4), 11, 13, null);
         graphics.setColor(new Color(0, 0, 0, 123));
-        graphics.fillRect(7, 9, 9, 1);
+        graphics.fillRect(7, 9, 8, 1);
         graphics.dispose();
         return scale(avatarImage, scale);
     }

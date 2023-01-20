@@ -28,6 +28,13 @@ public class Pixel {
         image.setRGB(x, y, color.getRGB());
     }
 
+    public String getColor(Image.ColorType colorType) {
+        return switch (colorType) {
+            case LEGACY ->  getLegacyColor();
+            case MINIMESSAGE -> getMiniMessageColor();
+        };
+    }
+
     public String getLegacyColor() {
         return String.valueOf(ChatColor.of(getColor()));
     }

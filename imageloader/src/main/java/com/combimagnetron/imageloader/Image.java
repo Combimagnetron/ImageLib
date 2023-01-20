@@ -9,7 +9,7 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.util.List;
 
-public final class Image implements IImage {
+public final class Image {
     private final Path path;
     private final String url;
     private final ColorType colorType;
@@ -35,17 +35,14 @@ public final class Image implements IImage {
     }
 
 
-    @Override
     public void color(Color color) {
         image.getGraphics().setColor(color);
     }
 
-    @Override
     public void color(int[] from, int[] to, Color color) {
         //TODO
     }
 
-    @Override
     public void color(int x, int y, Color color) {
         image.setRGB(x, y, color.getRGB());
     }
