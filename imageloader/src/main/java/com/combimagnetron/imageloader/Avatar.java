@@ -1,10 +1,17 @@
 package com.combimagnetron.imageloader;
 
+import org.bukkit.Bukkit;
+
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Avatar {
     private final BufferedImage image;
@@ -13,15 +20,27 @@ public class Avatar {
     private final BufferedImage skinSideLeft;
     private final BufferedImage skinSideRight;
     private Image.ColorType colorType = Image.ColorType.LEGACY;
+    private static ConcurrentHashMap<String, BufferedImage> imageCache = new ConcurrentHashMap<>();
 
     protected Avatar(String playerName, int scale, boolean slim, Image.ColorType colorType) {
         try {
-            image = new BufferedImage(64, 64, 2);
-            Graphics graphics = image.getGraphics();
-            BufferedImage temp = ImageIO.read(new URL("https://mineskin.eu/skin/" + playerName));
-            graphics.drawImage(temp, 0, 0, null);
-            graphics.dispose();
-        } catch (IOException e) {
+            image = imageCache.computeIfAbsent(playerName, key -> {
+                try {
+                    BufferedImage img = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
+                    Graphics graphics = img.getGraphics();
+                    BufferedImage temp = ImageIO.read(new URL("https://mc-heads.net/skin/" + Bukkit.getOfflinePlayer(playerName).getUniqueId()));
+                    System.out.println("Image loaded from URL");
+                    System.out.println("Image size: " + temp.getWidth() + "x" + temp.getHeight());
+                    graphics.drawImage(temp, 0, 0, null);
+                    graphics.dispose();
+                    return img;
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
         this.isSlim = slim;
@@ -239,5 +258,4 @@ public class Avatar {
             return null;
         }
     }
-
 }
